@@ -96,6 +96,44 @@ export function parseMacTrackOutput(output: string): RawMedia | null {
   return found.find((m) => m.playing) ?? found[0] ?? null;
 }
 
+/** Properties requested from `nowplaying-cli get --json` for media reading. */
+export const NOW_PLAYING_PROPS = ["title", "artist", "album", "duration", "playbackRate", "clientBundleIdentifier"] as const;
+
+/** get-raw uses full MediaRemote keys; the `elapsedTime` alias of `get` reports 0 in nowplaying-cli 2.1.0. */
+export const RAW_ELAPSED_KEY = "kMRMediaRemoteNowPlayingInfoElapsedTime";
+
+/** Maps a MediaRemote client bundle id to the name PhoneDesk shows on the tile. */
+export function appFromBundle(bundle: unknown): string {
+  const id = typeof bundle === "string" ? bundle : "";
+  if (id === "com.apple.Music") return "Music";
+  if (id === "com.spotify.client") return "Spotify";
+  if (/youtube.*music|cinhimbnkkaeohfgghhklpknlkffjgod/i.test(id)) return "YouTube Music";
+  const last = id.split(".").pop();
+  return last ? last.replace(/[_-]+/g, " ") : "Now Playing";
+}
+
+/** Parses the JSON object from `nowplaying-cli get --json ...NOW_PLAYING_PROPS`. */
+export function parseNowPlayingJson(value: unknown): RawMedia | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  const title = typeof v.title === "string" ? v.title : "";
+  const artist = typeof v.artist === "string" ? v.artist : "";
+  if (!title && !artist) return null;
+  const n = (x: unknown) => {
+    const d = typeof x === "number" ? x : Number(x ?? 0);
+    return Number.isFinite(d) && d >= 0 ? d : 0;
+  };
+  return {
+    app: appFromBundle(v.clientBundleIdentifier),
+    title,
+    artist,
+    album: typeof v.album === "string" ? v.album : "",
+    playing: n(v.playbackRate) > 0,
+    position: n(v.elapsedTime),
+    duration: n(v.duration),
+  };
+}
+
 /** Parses `playerctl metadata --format` output (see LINUX_FORMAT). Position and length are microseconds. */
 export function parsePlayerctl(output: string): RawMedia | null {
   const line = output.split(/\r?\n/).find((l) => l.includes(US));
@@ -174,6 +212,8 @@ export interface PollResult {
   media: Media | null;
   /** True when the track (app/title/artist) differs from the previous published media: the message should carry artwork. */
   trackChanged: boolean;
+  /** True when the cached cover appeared or changed for the same track. */
+  artworkChanged: boolean;
 }
 
 /** While a playing track has less than this many seconds left, the agent polls every NEAR_END_MS. */
@@ -196,6 +236,9 @@ export class MediaTracker {
   private publishedAt = 0;
   private artKey = "";
   private art: string | undefined;
+  private artRetryAt = 0;
+  private artRetryUntil = 0;
+  private artPending = false;
   private now: () => number;
 
   constructor(private deps: TrackerDeps) {
@@ -214,22 +257,50 @@ export class MediaTracker {
       this.current = null;
       this.artKey = "";
       this.art = undefined;
-      return { changed: prev !== null, media: null, trackChanged: prev !== null && prev !== undefined };
+      this.artRetryAt = 0;
+      this.artRetryUntil = 0;
+      this.artPending = false;
+      return { changed: prev !== null, media: null, trackChanged: prev !== null && prev !== undefined, artworkChanged: !!prev?.artwork };
     }
 
     const k = this.key(raw);
+    const now = this.now();
     if (k !== this.artKey) {
+      const oldKey = this.artKey;
+      const oldArt = this.art;
       this.artKey = k;
-      this.art = undefined;
       this.art = await this.deps.artwork(raw).catch(() => undefined);
+      if (this.art) {
+        this.artRetryAt = 0;
+        this.artRetryUntil = 0;
+        this.artPending = false;
+      } else {
+        // nowplaying-cli can briefly return empty artwork while metadata settles.
+        // Keep the old cover for the same app+title and try again for up to 60 s.
+        const sameTitle = oldKey && oldArt && oldKey.split("|").slice(0, 2).join("|") === k.split("|").slice(0, 2).join("|");
+        if (sameTitle) this.art = oldArt;
+        this.artPending = true;
+        this.artRetryAt = now + 5_000;
+        this.artRetryUntil = now + 60_000;
+      }
+    } else if (this.artPending && now >= this.artRetryAt && now < this.artRetryUntil) {
+      const fetched = await this.deps.artwork(raw).catch(() => undefined);
+      if (fetched) {
+        this.art = fetched;
+        this.artPending = false;
+        this.artRetryAt = 0;
+        this.artRetryUntil = 0;
+      } else {
+        this.artRetryAt = now + 5_000;
+      }
     }
     const { artworkUrl: _u, ...rest } = raw;
     const media: Media = this.art ? { ...rest, artwork: this.art } : rest;
     this.seen = media;
 
-    const now = this.now();
     let changed = true;
     let trackChanged = true;
+    const artworkChanged = !prev ? !!media.artwork : prev.artwork !== media.artwork;
     if (prev) {
       trackChanged = this.key(prev) !== k;
       const expected = prev.playing ? prev.position + (now - this.publishedAt) / 1000 : prev.position;
@@ -239,13 +310,13 @@ export class MediaTracker {
         prev.playing !== media.playing ||
         Math.abs(prev.duration - media.duration) > 1 ||
         Math.abs(media.position - expected) > SEEK_TOLERANCE ||
-        (!prev.artwork && !!media.artwork);
+        artworkChanged;
     }
     if (changed) {
       this.current = media;
       this.publishedAt = now;
     }
-    return { changed, media: changed ? media : (this.current as Media), trackChanged };
+    return { changed, media: changed ? media : (this.current as Media), trackChanged, artworkChanged };
   }
 }
 

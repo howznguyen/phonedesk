@@ -3,7 +3,7 @@ import { WIN, MODE600, MODE644 } from "./_os";
 import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { LAST_ARTWORK_MAX, LastMediaStore, MediaTracker, parseControl, parseMacTrackOutput, parsePlayerctl, resumeScript, type RawMedia } from "../src/media";
+import { LAST_ARTWORK_MAX, LastMediaStore, MediaTracker, parseControl, parseMacTrackOutput, parseNowPlayingJson, appFromBundle, parsePlayerctl, resumeScript, type RawMedia } from "../src/media";
 import { netRate, parseNetstat, parseProcNetDev } from "../src/stats";
 import { buildMacMediaFallback, buildVolumeCommand, parseMacVolumeSettings, parsePactlVolume } from "../src/actions";
 
@@ -25,6 +25,26 @@ describe("parseMacTrackOutput", () => {
   test("empty / stopped output is null", () => {
     expect(parseMacTrackOutput("")).toBeNull();
     expect(parseMacTrackOutput("\n\n")).toBeNull();
+  });
+});
+
+describe("parseNowPlayingJson", () => {
+  test("YouTube Music PWA is mapped by bundle id", () => {
+    const media = parseNowPlayingJson({
+      title: "what if we?", artist: "Emi Choi", album: "", duration: 208,
+      elapsedTime: 3.1, playbackRate: 1,
+      clientBundleIdentifier: "com.brave.Browser.app.cinhimbnkkaeohfgghhklpknlkffjgod",
+    });
+    expect(media).toEqual({ app: "YouTube Music", title: "what if we?", artist: "Emi Choi", album: "", playing: true, position: 3.1, duration: 208 });
+  });
+  test("paused player and missing metadata", () => {
+    expect(parseNowPlayingJson({ title: "T", artist: "", playbackRate: 0, clientBundleIdentifier: "com.apple.Music" })).toMatchObject({ app: "Music", playing: false });
+    expect(parseNowPlayingJson({ title: null, artist: null })).toBeNull();
+    expect(parseNowPlayingJson(null)).toBeNull();
+  });
+  test("unknown bundle falls back to a readable name", () => {
+    expect(appFromBundle("com.example.Player")).toBe("Player");
+    expect(appFromBundle(null)).toBe("Now Playing");
   });
 });
 
@@ -98,6 +118,30 @@ describe("MediaTracker", () => {
     advance(1500);
     await tracker.poll();
     expect(artCalls).toEqual(["T", "T2", "T"]); // one fetch per track change, none on pause/seek
+  });
+
+  test("brief empty artwork keeps the cover on the same title and retries until it returns", async () => {
+    let t = 0;
+    let polls = 0;
+    let calls = 0;
+    const tracker = new MediaTracker({
+      read: async () => { polls++; return { ...base, artist: polls < 3 ? "Wrong" : "Right" }; },
+      artwork: async () => { calls++; return calls === 2 ? undefined : calls === 3 ? "data:cover2" : "data:cover"; },
+      now: () => t,
+    });
+    const first = await tracker.poll();
+    expect(first.media?.artwork).toBe("data:cover");
+    t += 1000;
+    expect((await tracker.poll()).media?.artwork).toBe("data:cover");
+    t += 1000;
+    const flicker = await tracker.poll();
+    expect(flicker.trackChanged).toBe(true);
+    expect(flicker.media?.artwork).toBe("data:cover"); // old cover kept while metadata settles
+    t += 5000;
+    const retried = await tracker.poll();
+    expect(retried.artworkChanged).toBe(true);
+    expect(retried.media?.artwork).toBe("data:cover2");
+    expect(calls).toBe(3);
   });
 
   test("nothing playing: null once, then unchanged", async () => {
