@@ -214,7 +214,7 @@ export type ThemeOrientation = "landscape" | "portrait" | "auto";
 
 export interface Theme {
   /** UI language for this page and the phone overlay; missing means English. */
-  language?: "en" | "vi";
+  language?: "en" | "vi" | "zh";
   /** Unit for every temperature on the phone; missing means Celsius. A weather widget's own `units` wins for that widget. */
   temperatureUnit?: "c" | "f";
   /** Look for a newer PhoneDesk once a day; missing means on. */

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { getLang } from './i18n'
 import { t } from './i18n'
-import { timeWords, timeWordsEn } from './clock-words'
+import { timeWords, timeWordsEn, timeWordsZh } from './clock-words'
 import { AnimatedNumber, reducedMotion } from './knowns'
 import { tint } from './theme'
 import type { ClockOptions } from './types'
@@ -26,6 +26,7 @@ export interface ClockProps {
 
 const WEEKDAY_VI = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy']
 const WEEKDAY_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const WEEKDAY_ZH = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 const MONTH_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const pad2 = (n: number) => (n < 10 ? '0' : '') + n
 const fit = (chars: number, avail: number, max: number, min: number) => Math.max(min, Math.min(max, Math.floor(avail / (Math.max(1, chars) * 0.62))))
@@ -84,14 +85,44 @@ const CITY: { [k: string]: string } = {
   Phnom_Penh: 'Phnom Penh',
 }
 
+const CITY_ZH: { [k: string]: string } = {
+  Ho_Chi_Minh: '胡志明市',
+  Saigon: '胡志明市',
+  Hanoi: '河内',
+  London: '伦敦',
+  Paris: '巴黎',
+  Berlin: '柏林',
+  Moscow: '莫斯科',
+  Shanghai: '上海',
+  Hong_Kong: '香港',
+  Beijing: '北京',
+  Tokyo: '东京',
+  Seoul: '首尔',
+  Bangkok: '曼谷',
+  Singapore: '新加坡',
+  Sydney: '悉尼',
+  Dubai: '迪拜',
+  Kolkata: '加尔各答',
+  New_York: '纽约',
+  Los_Angeles: '洛杉矶',
+  Chicago: '芝加哥',
+  Phnom_Penh: '金边',
+}
+
 /** "Europe/London" -> "London", "America/New_York" -> "New York". */
 export function cityName(tz: string): string {
   const last = tz.split('/').pop() || tz
+  if (getLang() === 'zh') return CITY_ZH[last] || last.replace(/_/g, ' ')
   return (getLang() === 'vi' && CITY[last]) || last.replace(/_/g, ' ')
 }
 
 const hour12Of = (h: number) => h % 12 || 12
-const dateText = (p: Parts) => (getLang() === 'vi' ? WEEKDAY_VI[p.wd] + ', ' + p.d + ' tháng ' + p.mo : WEEKDAY_EN[p.wd] + ', ' + MONTH_EN[p.mo - 1] + ' ' + p.d)
+const dateText = (p: Parts) =>
+  getLang() === 'zh'
+    ? p.mo + '月' + p.d + '日 ' + WEEKDAY_ZH[p.wd]
+    : getLang() === 'vi'
+      ? WEEKDAY_VI[p.wd] + ', ' + p.d + ' tháng ' + p.mo
+      : WEEKDAY_EN[p.wd] + ', ' + MONTH_EN[p.mo - 1] + ' ' + p.d
 
 function useNow() {
   const [now, setNow] = useState(() => new Date())
@@ -214,7 +245,7 @@ function Minimal(s: Sub) {
 
 /** word: "half past ten" / "mười giờ rưỡi" (rules in clock-words.ts). */
 function Words(s: Sub) {
-  const w = getLang() === 'vi' ? timeWords(s.p.h, s.p.m) : timeWordsEn(s.p.h, s.p.m)
+  const w = getLang() === 'zh' ? timeWordsZh(s.p.h, s.p.m) : getLang() === 'vi' ? timeWords(s.p.h, s.p.m) : timeWordsEn(s.p.h, s.p.m)
   const cap = Math.round(s.th * 0.11)
   const showPart = s.th >= 90
   const areaW = s.tw - 28

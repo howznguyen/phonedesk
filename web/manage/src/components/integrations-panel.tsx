@@ -83,7 +83,7 @@ const SPECIAL: Partial<Record<AiProvider, { label: string; hint: string; title: 
 function when(iso?: string): string | undefined {
   if (!iso) return undefined;
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? undefined : d.toLocaleTimeString(getLanguage() === "vi" ? "vi-VN" : "en-US", { hour: "2-digit", minute: "2-digit" });
+  return Number.isNaN(d.getTime()) ? undefined : d.toLocaleTimeString(getLanguage() === "vi" ? "vi-VN" : getLanguage() === "zh" ? "zh-CN" : "en-US", { hour: "2-digit", minute: "2-digit" });
 }
 
 /** Read-only quota bars, one per window. Plain markup: no extra component needed. */

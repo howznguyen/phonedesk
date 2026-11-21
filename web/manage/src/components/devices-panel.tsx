@@ -15,7 +15,7 @@ import type { DeviceInfo, Pairing } from "@/types";
 function when(iso?: string | number): string {
   if (!iso) return t("never");
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString(getLanguage() === "vi" ? "vi-VN" : undefined);
+  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString(getLanguage() === "vi" ? "vi-VN" : getLanguage() === "zh" ? "zh-CN" : undefined);
 }
 
 export function DevicesPanel() {

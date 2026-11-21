@@ -137,7 +137,7 @@ export type Item = {
 export interface Theme {
   mode?: 'dark' | 'light' | 'auto'
   /** UI language of the overlays; missing = 'en' */
-  language?: 'en' | 'vi'
+  language?: 'en' | 'vi' | 'zh'
   accent?: string
   background?: string
   tile?: string

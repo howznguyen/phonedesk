@@ -108,7 +108,7 @@ export interface WidgetProps {
 }
 
 export function Widget(props: WidgetProps) {
-  if (props.kind === 'clock') return <ClockWidget tw={props.tw} th={props.th} scale={props.scale} showLabel={props.showLabel} textColor={props.textColor} color={props.color} opts={props.clock} caption={LABEL.clock} />
+  if (props.kind === 'clock') return <ClockWidget tw={props.tw} th={props.th} scale={props.scale} showLabel={props.showLabel} textColor={props.textColor} color={props.color} opts={props.clock} caption={t(LABEL.clock)} />
   if (props.kind === 'entity' && props.entity) return <EntityTile id={props.entity.id} cfg={props.entity} ent={props.hassEnt} forceOn={props.hassForceOn} pend={props.entPend} onStep={props.onStep} onLight={props.onLight} connected={props.hassConnected !== false} tw={props.tw} th={props.th} scale={props.scale} showLabel={props.showLabel} color={props.color} textColor={props.textColor} assets={props.assets} />
   if (props.kind === 'weather') return <WeatherTile opts={props.weather} data={props.wxData} tw={props.tw} th={props.th} cw={props.cw} ch={props.ch} scale={props.scale} showLabel={props.showLabel} textColor={props.textColor} assets={props.assets} />
   if (props.kind === 'value' && props.push) return <ValueTile cfg={props.push} val={props.pushed} tw={props.tw} th={props.th} scale={props.scale} showLabel={props.showLabel} color={props.color} textColor={props.textColor} />

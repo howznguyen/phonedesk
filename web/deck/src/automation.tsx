@@ -104,7 +104,8 @@ function WxGlyph(props: { cond: unknown; size: number; assets?: IconAssets }) {
 
 const DAY_VI = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
 const DAY_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const DAY = (): string[] => (getLang() === 'vi' ? DAY_VI : DAY_EN)
+const DAY_ZH = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+const DAY = (): string[] => (getLang() === 'zh' ? DAY_ZH : getLang() === 'vi' ? DAY_VI : DAY_EN)
 const degIn = (n: number | undefined, from: 'C' | 'F', to: 'C' | 'F') => (typeof n === 'number' && isFinite(n) ? Math.round(convTemp(n, from, to)) + '°' : '–')
 const SOURCE_NAME: { [k: string]: string } = { hass: 'Home Assistant', 'open-meteo': 'Open-Meteo' }
 /** low-opacity, condition tinted wash behind the tile (brand-safe tones, fine on light and dark) */
@@ -132,7 +133,7 @@ const condAt = (c: unknown, ms: number): Cond => {
 }
 const hourLabel = (ms: number) => {
   const h = new Date(ms).getHours()
-  return getLang() === 'vi' ? h + 'h' : (h % 12 || 12) + (h < 12 ? ' AM' : ' PM')
+  return getLang() === 'zh' ? h + '时' : getLang() === 'vi' ? h + 'h' : (h % 12 || 12) + (h < 12 ? ' AM' : ' PM')
 }
 
 export interface WeatherProps {

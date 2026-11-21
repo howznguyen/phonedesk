@@ -23,7 +23,7 @@ const EMOJI_GROUP_EN: Record<string, string> = {
   activities: "Activities", objects: "Objects", symbols: "Symbols & signs", flags: "Flags",
 };
 const cmp = (a: string, b: string) => a.localeCompare(b, getLanguage());
-const numLocale = () => (getLanguage() === "vi" ? "vi-VN" : "en-US");
+const numLocale = () => (getLanguage() === "vi" ? "vi-VN" : getLanguage() === "zh" ? "zh-CN" : "en-US");
 
 type Tab = "icon" | "brand" | "lobe" | "emoji" | "app" | "img";
 const TABS: { value: Tab; label: string }[] = [

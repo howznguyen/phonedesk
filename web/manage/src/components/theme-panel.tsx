@@ -162,7 +162,7 @@ export function ThemePanel({ layout, pageId, onChange, orientation, onOrientatio
                 size="sm"
                 aria-label={t("Language")}
                 value={asLanguage(th.language)}
-                onValueChange={(v) => set({ language: v === "vi" ? "vi" : undefined })}
+                onValueChange={(v) => set({ language: v === "vi" || v === "zh" ? v : "en" })}
                 options={LANGUAGES.map((l) => ({ value: l.id, label: l.label }))}
               />
             </Field>

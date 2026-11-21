@@ -9,7 +9,7 @@ import type { About } from "@/types";
 function fmtDate(iso?: string): string | undefined {
   if (!iso) return undefined;
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(getLanguage() === "vi" ? "vi-VN" : "en-US", { year: "numeric", month: "short", day: "numeric" });
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(getLanguage() === "vi" ? "vi-VN" : getLanguage() === "zh" ? "zh-CN" : "en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function AboutCard({ about }: { about: About | null }) {

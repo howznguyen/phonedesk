@@ -16,11 +16,19 @@ const TEXT: Record<Language, { title: string; lead: string; open: string; back: 
     back: "Quay lại bảng điều khiển trên điện thoại",
     lang: "vi",
   },
+  zh: {
+    title: "管理页面只能在电脑上打开",
+    lead: "为了安全，PhoneDesk 的管理页面只能在运行它的那台电脑上打开。",
+    open: "请在那台电脑上打开此地址：",
+    back: "返回手机控制面板",
+    lang: "zh",
+  },
 };
 
 /** The language of the page: the saved theme language when there is one, else the browser's Accept-Language. */
 export function pickLanguage(themeLanguage: unknown, acceptLanguage: string | null): Language {
-  if (themeLanguage === "vi" || themeLanguage === "en") return themeLanguage;
+  if (themeLanguage === "vi" || themeLanguage === "en" || themeLanguage === "zh") return themeLanguage;
+  if (/^\s*zh(-|;|,|$)/i.test(acceptLanguage ?? "")) return "zh";
   return /^\s*vi(-|;|,|$)/i.test(acceptLanguage ?? "") ? "vi" : "en"; // the first (preferred) language
 }
 

@@ -47,6 +47,20 @@ const NPVI: { [en: string]: string } = {
   Play: 'Phát',
 }
 const tn = (en: string, a?: string | number): string => (getLang() === 'vi' && NPVI[en] ? NPVI[en].split('{0}').join(String(a)) : t(en, a))
+
+/** Labels of the player in Simplified Chinese (resolveLabels matches by field name, not by English text). */
+const ZH_LABELS: Partial<NowPlayingLabels> = {
+  nowPlaying: '正在播放',
+  nothingPlaying: '没有正在播放的内容',
+  play: '播放',
+  pause: '暂停',
+  previous: '上一首',
+  next: '下一首',
+  mute: '静音',
+  unmute: '取消静音',
+  position: '进度',
+  volume: '音量',
+}
 /** Short age for the "Last played" chip: "11 min", "3 h", "2 d". */
 export function agoShort(at: number, now: number): string {
   const min = Math.max(0, Math.floor((now - at) / 60000))
@@ -169,7 +183,7 @@ const layer = (opacity: number, x: number, scale?: number) => {
 export const NP_HIT = { ghost: 44, play: 52, playRow: 48, slider: 44, thumb: 22 }
 
 export function NowPlayingTile(props: NowPlayingTileProps) {
-  const L = getLang() === 'vi' ? resolveLabels(DEFAULT_LABELS, VI) : DEFAULT_LABELS
+  const L = getLang() === 'vi' ? resolveLabels(DEFAULT_LABELS, VI) : getLang() === 'zh' ? resolveLabels(DEFAULT_LABELS, ZH_LABELS) : DEFAULT_LABELS
   const m = props.media
   const track: Track | null = m && (m.title || m.artist) ? { title: m.title || '-', artist: m.artist || '', album: m.album, cover: m.artwork } : null
   const total = Math.max(0, (m && m.duration) || 0)
